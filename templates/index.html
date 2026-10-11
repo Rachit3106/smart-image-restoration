@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DIP Project Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; text-align: center; }
+        .container { max-width: 850px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .canvas-wrapper { position: relative; display: inline-block; margin-top: 15px; }
+        #baseImage { display: block; max-width: 100%; height: auto; border: 2px dashed #007bff; border-radius: 8px; }
+        #paintCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
+        #resultImage { max-width: 100%; height: auto; border: 2px solid #ccc; border-radius: 8px; margin-top: 15px; }
+        .controls { margin: 20px 0; }
+        button { background: #28a745; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 6px; cursor: pointer; }
+        button:hover { background: #218838; }
+        select, input { padding: 8px; font-size: 15px; border-radius: 5px; border: 1px solid #ccc; margin-right: 10px; }
+        .output-section { margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Digital Image Processing Suite</h2>
+        <p>Upload an image, choose your action, or circle an unwanted object to remove it.</p>
+        
+        <div class="controls">
+            <input type="file" id="imageInput" accept="image/*"><br><br>
+            <label>Select Action: </label>
+            <select id="actionSelect" onchange="toggleCanvasMode()">
+                <option value="shadow">Shadow Removal</option>
+                <option value="enhance">Image Enhancement</option>
+                <option value="remove_object">Remove Object (Circle/Paint)</option>
+            </select>
+            <button onclick="processImage()">Process Image</button>
+        </div>
+
+        <div class="canvas-container" id="canvasBox" style="display:none;">
+            <p style="font-size: 13px; color: #d9534f; font-weight: bold;">Circle or paint over the object you want to remove:</p>
+            <div class="canvas-wrapper">
+                <img id="baseImage" alt="Upload Image">
+                <canvas id="paintCanvas"></canvas>
+            </div><br>
+            <button onclick="clearCanvas()" style="background: #dc3545; margin-top: 10px; padding: 5px 15px; font-size: 14px;">Clear Drawing</button>
+        </div>
+
+        <div class="output-section" id="outputBox" style="display:none;">
+            <h3>Processed Result:</h3>
+            <img id="resultImage" alt="Processed Output"><br><br>
+            <!-- Download Button Added Here -->
+            <a id="downloadBtn" download="processed_image.jpg" style="display:inline-block; background: #007bff; color: white; text-decoration: none; padding: 10px 20px; font-size: 16px; border-radius: 6px; font-weight: bold;">Download Image</a>
+        </div>
+    </div>
+
+    <script>
+        let imageElement = document.getElementById('baseImage');
+        let canvas = document.getElementById('paintCanvas');
+        let ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            let file = e.target.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function(event) {
+                    imageElement.onload = function() {
+                        canvas.width = imageElement.naturalWidth;
+                        canvas.height = imageElement.naturalHeight;
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                    imageElement.src = event.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function toggleCanvasMode() {
+            let action = document.getElementById('actionSelect').value;
+            let box = document.getElementById('canvasBox');
+            box.style.display = (action === 'remove_object') ? 'block' : 'none';
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function getMousePos(evt) {
+            let rect = canvas.getBoundingClientRect();
+            return {
+                x: (evt.clientX - rect.left) * (canvas.width / rect.width),
+                y: (evt.clientY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            drawing = true;
+            let pos = getMousePos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        });
+
+        canvas.addEventListener('mouseup', () => { drawing = false; });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!drawing) return;
+            let pos = getMousePos(e);
+            ctx.lineWidth = Math.max(15, canvas.width / 40);
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'white';
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+        });
+
+        async function processImage() {
+            let fileInput = document.getElementById('imageInput');
+            let action = document.getElementById('actionSelect').value;
+
+            if (fileInput.files.length === 0) {
+                alert('Please upload an image first!');
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            formData.append('action', action);
+
+            if (action === 'remove_object') {
+                let maskCanvas = document.createElement('canvas');
+                maskCanvas.width = canvas.width;
+                maskCanvas.height = canvas.height;
+                let mCtx = maskCanvas.getContext('2d');
+                
+                mCtx.fillStyle = 'black';
+                mCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+                mCtx.drawImage(canvas, 0, 0);
+
+                let maskBlob = await new Promise(resolve => maskCanvas.toBlob(resolve, 'image/png'));
+                formData.append('mask', maskBlob, 'mask.png');
+            }
+
+            let response = await fetch('/process', { method: 'POST', body: formData });
+            let data = await response.json();
+
+            if (data.error) {
+                alert('Error: ' + data.error);
+            } else {
+                let resultImg = document.getElementById('resultImage');
+                resultImg.src = data.processed_image;
+                
+                // Link the processed image to the download button
+                let downloadBtn = document.getElementById('downloadBtn');
+                downloadBtn.href = data.processed_image;
+
+                document.getElementById('outputBox').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
