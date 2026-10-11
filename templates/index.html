@@ -2,59 +2,154 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DIP Project Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Image Restoration Suite</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; text-align: center; }
-        .container { max-width: 850px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .canvas-wrapper { position: relative; display: inline-block; margin-top: 15px; }
-        #baseImage { display: block; max-width: 100%; height: auto; border: 2px dashed #007bff; border-radius: 8px; }
-        #paintCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
-        #resultImage { max-width: 100%; height: auto; border: 2px solid #ccc; border-radius: 8px; margin-top: 15px; }
-        .controls { margin: 20px 0; }
-        button { background: #28a745; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 6px; cursor: pointer; }
-        button:hover { background: #218838; }
-        select, input { padding: 8px; font-size: 15px; border-radius: 5px; border: 1px solid #ccc; margin-right: 10px; }
-        .output-section { margin-top: 30px; }
+        body { font-family: 'Inter', sans-serif; }
+        .canvas-wrapper { position: relative; display: inline-block; max-width: 100%; }
+        #baseImage { display: block; max-width: 100%; height: auto; border-radius: 1rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }
+        #paintCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+        
+        /* Bulletproof forced sizing for dropdown elements */
+        .forced-dropdown-btn {
+            font-size: 2rem !important;
+            line-height: 2.5rem !important;
+            padding-top: 1.5rem !important;
+            padding-bottom: 1.5rem !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+        }
+        .forced-dropdown-item {
+            font-size: 2rem !important;
+            line-height: 2.5rem !important;
+            padding-top: 1.5rem !important;
+            padding-bottom: 1.5rem !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+        }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h2>Digital Image Processing Suite</h2>
-        <p>Upload an image, choose your action, or circle an unwanted object to remove it.</p>
+<body class="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 w-screen min-h-screen text-slate-100 flex flex-col justify-between py-6 px-6 md:px-10">
+
+    <!-- Massive Header Section -->
+    <header class="text-center mb-6 w-full">
+        <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400 pb-2">
+            Smart Image Restoration Suite
+        </h1>
+        <p class="text-slate-300 text-xl md:text-2xl font-semibold mt-2">
+            Advanced Flask & OpenCV Pipeline for Shadow Removal, Clarity, and Inpainting
+        </p>
+    </header>
+
+    <!-- Main Full-Screen Expanded Dashboard Card -->
+    <main class="w-full h-full min-h-[82vh] bg-slate-900/90 backdrop-blur-2xl border-2 border-slate-700 rounded-3xl shadow-2xl p-8 md:p-14 flex flex-col justify-between">
         
-        <div class="controls">
-            <input type="file" id="imageInput" accept="image/*"><br><br>
-            <label>Select Action: </label>
-            <select id="actionSelect" onchange="toggleCanvasMode()">
-                <option value="shadow">Shadow Removal</option>
-                <option value="enhance">Image Enhancement</option>
-                <option value="remove_object">Remove Object (Circle/Paint)</option>
-            </select>
-            <button onclick="processImage()">Process Image</button>
+        <!-- Controls Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center mb-8">
+            
+            <!-- File Input -->
+            <div class="md:col-span-3">
+                <label class="block text-2xl font-bold text-slate-100 mb-3">Upload Source Image</label>
+                <input type="file" id="imageInput" accept="image/*" class="w-full text-lg md:text-xl text-slate-200 file:mr-8 file:py-5 file:px-10 file:rounded-2xl file:border-0 file:text-lg file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer cursor-pointer bg-slate-950/80 border-2 border-slate-700 rounded-2xl p-4 transition">
+            </div>
+
+            <!-- Custom Fully Scaled Action Selector -->
+            <div class="md:col-span-2 relative">
+                <label class="block text-2xl font-bold text-slate-100 mb-3">Select Processing Pipeline</label>
+                
+                <!-- Hidden input field to keep 100% compatibility with backend Flask logic -->
+                <input type="hidden" id="actionSelect" value="shadow">
+
+                <!-- Custom Trigger Box -->
+                <div id="dropdownTrigger" onclick="toggleDropdown()" class="w-full bg-slate-950/90 border-2 border-slate-700 rounded-2xl forced-dropdown-btn font-bold text-slate-100 flex justify-between items-center cursor-pointer hover:border-blue-500 transition shadow-inner">
+                    <span id="selectedText">Natural Shadow Removal</span>
+                    <svg class="w-10 h-10 text-slate-300 transition-transform duration-200" id="dropdownArrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+
+                <!-- Custom Popup List (Guaranteed Massive Text) -->
+                <div id="dropdownMenu" class="hidden absolute left-0 right-0 mt-3 bg-slate-950 border-2 border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-slate-800">
+                    <div onclick="selectOption('shadow', 'Natural Shadow Removal')" class="forced-dropdown-item font-semibold text-slate-100 hover:bg-blue-600 cursor-pointer transition">Natural Shadow Removal</div>
+                    <div onclick="selectOption('enhance', 'High-Clarity Image Enhancement')" class="forced-dropdown-item font-semibold text-slate-100 hover:bg-blue-600 cursor-pointer transition">High-Clarity Image Enhancement</div>
+                    <div onclick="selectOption('remove_object', 'Object Removal (Interactive Masking)')" class="forced-dropdown-item font-semibold text-slate-100 hover:bg-blue-600 cursor-pointer transition">Object Removal (Interactive Masking)</div>
+                </div>
+            </div>
+
+            <!-- Process Button -->
+            <div class="md:col-span-1 flex items-end h-full">
+                <button id="processBtn" onclick="processImage()" class="w-full mt-4 md:mt-0 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold py-5 px-8 rounded-2xl shadow-xl transition duration-200 flex items-center justify-center space-x-3 cursor-pointer text-xl md:text-2xl h-[94px]">
+                    <span>Process Image</span>
+                </button>
+            </div>
         </div>
 
-        <div class="canvas-container" id="canvasBox" style="display:none;">
-            <p style="font-size: 13px; color: #d9534f; font-weight: bold;">Circle or paint over the object you want to remove:</p>
-            <div class="canvas-wrapper">
-                <img id="baseImage" alt="Upload Image">
+        <!-- Interactive Canvas Box (For Object Removal) -->
+        <div class="canvas-container bg-slate-950/80 border-2 border-slate-700 rounded-3xl p-8 text-center my-6 flex-grow flex flex-col items-center justify-center" id="canvasBox" style="display:none;">
+            <p class="text-xl md:text-2xl text-amber-300 font-bold mb-6 bg-amber-500/10 py-4 px-8 rounded-2xl border-2 border-amber-500/30 inline-block">
+                ✏️ Click and drag over the unwanted object or blemish to mask it for inpainting.
+            </p>
+            <div class="canvas-wrapper my-4">
+                <img id="baseImage" alt="Upload Preview">
                 <canvas id="paintCanvas"></canvas>
-            </div><br>
-            <button onclick="clearCanvas()" style="background: #dc3545; margin-top: 10px; padding: 5px 15px; font-size: 14px;">Clear Drawing</button>
+            </div>
+            <div>
+                <button onclick="clearCanvas()" class="mt-6 bg-rose-600 hover:bg-rose-700 text-white text-xl font-bold py-4 px-10 rounded-2xl shadow-lg transition duration-150 cursor-pointer">
+                    Clear Mask Drawing
+                </button>
+            </div>
         </div>
 
-        <div class="output-section" id="outputBox" style="display:none;">
-            <h3>Processed Result:</h3>
-            <img id="resultImage" alt="Processed Output"><br><br>
-            <!-- Download Button Added Here -->
-            <a id="downloadBtn" download="processed_image.jpg" style="display:inline-block; background: #007bff; color: white; text-decoration: none; padding: 10px 20px; font-size: 16px; border-radius: 6px; font-weight: bold;">Download Image</a>
+        <!-- Output Result Section -->
+        <div class="output-section bg-slate-950/90 border-2 border-slate-700 rounded-3xl p-8 mt-6 text-center flex-grow flex flex-col items-center justify-center" id="outputBox" style="display:none;">
+            <h3 class="text-3xl font-extrabold text-slate-100 mb-6 flex items-center justify-center space-x-3">
+                <span>✨ Processed Output</span>
+            </h3>
+            <div class="flex justify-center mb-8">
+                <img id="resultImage" alt="Processed Output" class="max-h-[650px] object-contain rounded-2xl border-2 border-slate-700 shadow-2xl">
+            </div>
+            <a id="downloadBtn" download="restored_image.jpg" class="inline-flex items-center space-x-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-5 px-12 rounded-2xl shadow-2xl transition duration-150 text-xl">
+                <span>Download Result</span>
+            </a>
         </div>
-    </div>
+    </main>
 
+    <!-- Footer Note -->
+    <footer class="text-base md:text-lg font-medium text-slate-400 text-center w-full py-2">
+        Smart Image Restoration Suite &bull; Flask & OpenCV Powered Architecture
+    </footer>
+
+    <!-- JavaScript Logic -->
     <script>
         let imageElement = document.getElementById('baseImage');
         let canvas = document.getElementById('paintCanvas');
         let ctx = canvas.getContext('2d');
         let drawing = false;
+
+        // Custom Dropdown Interaction Logic
+        function toggleDropdown() {
+            let menu = document.getElementById('dropdownMenu');
+            let arrow = document.getElementById('dropdownArrow');
+            menu.classList.toggle('hidden');
+            arrow.classList.toggle('rotate-180');
+        }
+
+        function selectOption(value, text) {
+            document.getElementById('actionSelect').value = value;
+            document.getElementById('selectedText').innerText = text;
+            document.getElementById('dropdownMenu').classList.add('hidden');
+            document.getElementById('dropdownArrow').classList.remove('rotate-180');
+            toggleCanvasMode();
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(e) {
+            if (!document.getElementById('dropdownTrigger').contains(e.target) && !document.getElementById('dropdownMenu').contains(e.target)) {
+                document.getElementById('dropdownMenu').classList.add('hidden');
+                document.getElementById('dropdownArrow').classList.remove('rotate-180');
+            }
+        });
 
         document.getElementById('imageInput').addEventListener('change', function(e) {
             let file = e.target.files[0];
@@ -75,7 +170,7 @@
         function toggleCanvasMode() {
             let action = document.getElementById('actionSelect').value;
             let box = document.getElementById('canvasBox');
-            box.style.display = (action === 'remove_object') ? 'block' : 'none';
+            box.style.display = (action === 'remove_object') ? 'flex' : 'none';
         }
 
         function clearCanvas() {
@@ -112,44 +207,57 @@
         async function processImage() {
             let fileInput = document.getElementById('imageInput');
             let action = document.getElementById('actionSelect').value;
+            let processBtn = document.getElementById('processBtn');
 
             if (fileInput.files.length === 0) {
                 alert('Please upload an image first!');
                 return;
             }
 
-            let formData = new FormData();
-            formData.append('image', fileInput.files[0]);
-            formData.append('action', action);
+            let originalBtnText = processBtn.innerHTML;
+            processBtn.disabled = true;
+            processBtn.innerHTML = `<span>Processing OpenCV Pipeline...</span>`;
 
-            if (action === 'remove_object') {
-                let maskCanvas = document.createElement('canvas');
-                maskCanvas.width = canvas.width;
-                maskCanvas.height = canvas.height;
-                let mCtx = maskCanvas.getContext('2d');
-                
-                mCtx.fillStyle = 'black';
-                mCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-                mCtx.drawImage(canvas, 0, 0);
+            try {
+                let formData = new FormData();
+                formData.append('image', fileInput.files[0]);
+                formData.append('action', action);
 
-                let maskBlob = await new Promise(resolve => maskCanvas.toBlob(resolve, 'image/png'));
-                formData.append('mask', maskBlob, 'mask.png');
-            }
+                if (action === 'remove_object') {
+                    let maskCanvas = document.createElement('canvas');
+                    maskCanvas.width = canvas.width;
+                    maskCanvas.height = canvas.height;
+                    let mCtx = maskCanvas.getContext('2d');
+                    
+                    mCtx.fillStyle = 'black';
+                    mCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+                    mCtx.drawImage(canvas, 0, 0);
 
-            let response = await fetch('/process', { method: 'POST', body: formData });
-            let data = await response.json();
+                    let maskBlob = await new Promise(resolve => maskCanvas.toBlob(resolve, 'image/png'));
+                    formData.append('mask', maskBlob, 'mask.png');
+                }
 
-            if (data.error) {
-                alert('Error: ' + data.error);
-            } else {
-                let resultImg = document.getElementById('resultImage');
-                resultImg.src = data.processed_image;
-                
-                // Link the processed image to the download button
-                let downloadBtn = document.getElementById('downloadBtn');
-                downloadBtn.href = data.processed_image;
+                let response = await fetch('/process', { method: 'POST', body: formData });
+                let data = await response.json();
 
-                document.getElementById('outputBox').style.display = 'block';
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    let resultImg = document.getElementById('resultImage');
+                    resultImg.src = data.processed_image;
+                    
+                    let downloadBtn = document.getElementById('downloadBtn');
+                    downloadBtn.href = data.processed_image;
+
+                    document.getElementById('outputBox').style.display = 'flex';
+                    document.getElementById('outputBox').scrollIntoView({ behavior: 'smooth' });
+                }
+            } catch (err) {
+                alert('An error occurred during communication with Flask backend.');
+                console.error(err);
+            } finally {
+                processBtn.disabled = false;
+                processBtn.innerHTML = originalBtnText;
             }
         }
     </script>
