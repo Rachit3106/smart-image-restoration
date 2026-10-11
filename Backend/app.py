@@ -4,7 +4,11 @@ import cv2
 import numpy as np
 from flask import Flask, jsonify, render_template, request
 
-app = Flask(__name__)
+# Configure template folder pointing one level up to root directory
+template_dir = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../templates")
+)
+app = Flask(__name__, template_folder=template_dir)
 
 
 def remove_shadows_pipeline(img):
